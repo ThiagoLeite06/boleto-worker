@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>BoletoWorker — Fluxo do Sistema</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 {
+    font-size: 18px;
+    color: #58a6ff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: #8b949e;
+    margin-bottom: 32px;
+  }
+
+  /* ── GRID PRINCIPAL ─────────────────────────────── */
+  .board {
+    display: grid;
+    grid-template-columns: 160px 1fr 260px 1fr 220px;
+    grid-template-rows: auto auto auto;
+    gap: 0 0;
+    align-items: center;
+  }
+
+  /* ── CAIXAS ─────────────────────────────────────── */
+  .box {
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: #161b22;
+    position: relative;
+    z-index: 2;
+  }
+
+  .box .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8b949e;
+    margin-bottom: 6px;
+  }
+
+  .box .name {
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  .box .detail {
+    font-size: 11px;
+    color: #8b949e;
+    margin-top: 4px;
+  }
+
+  .box.producer  { border-color: #388bfd; grid-column: 1; grid-row: 2; }
+  .box.exchange  { border-color: #d2a8ff; grid-column: 3; grid-row: 2; }
+  .box.dlq       { border-color: #f85149; grid-column: 5; grid-row: 1; margin-bottom: 8px; }
+  .box.queue     { border-color: #3fb950; grid-column: 5; grid-row: 2; }
+
+  .box.producer .name  { color: #388bfd; }
+  .box.exchange .name  { color: #d2a8ff; }
+  .box.dlq .name       { color: #f85149; }
+  .box.queue .name     { color: #3fb950; }
+
+  /* ── WORKERS ────────────────────────────────────── */
+  .workers-col {
+    grid-column: 5;
+    grid-row: 3;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .worker {
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 8px 12px;
+    background: #161b22;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .worker .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #30363d;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  .worker.active {
+    border-color: #3fb950;
+    background: #0d2318;
+  }
+
+  .worker.active .dot { background: #3fb950; }
+
+  .worker .w-label { color: #8b949e; }
+  .worker .w-status { margin-left: auto; font-size: 10px; color: #8b949e; }
+  .worker.active .w-status { color: #3fb950; }
+
+  /* ── CONECTORES ─────────────────────────────────── */
+  .connector {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  .connector.h { grid-row: 2; }
+  .connector.h-top { grid-row: 1; }
+
+  .line {
+    position: absolute;
+    background: #30363d;
+  }
+
+  .line.h { height: 2px; width: 100%; }
+  .line.v { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+
+  /* ── PARTÍCULAS ─────────────────────────────────── */
+  .particle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    z-index: 10;
+    display: none;
+    font-size: 10px;
+    line-height: 10px;
+    text-align: center;
+  }
+
+  /* ── FILA VISUAL ────────────────────────────────── */
+  .queue-visual {
+    margin-top: 8px;
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+
+  .q-item {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: #3fb950;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .q-item.visible { opacity: 1; }
+
+  /* ── LOG ────────────────────────────────────────── */
+  .log-panel {
+    grid-column: 1 / 6;
+    grid-row: 4;
+    margin-top: 32px;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    background: #0d1117;
+    padding: 12px 16px;
+    height: 160px;
+    overflow: hidden;
+  }
+
+  .log-panel .log-title {
+    font-size: 10px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #21262d;
+    padding-bottom: 6px;
+  }
+
+  .log-entries {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+    height: 118px;
+    overflow: hidden;
+  }
+
+  .log-entry {
+    font-size: 11px;
+    line-height: 1.6;
+    opacity: 0;
+    animation: fadeIn 0.3s forwards;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .log-entry .ts    { color: #8b949e; }
+  .log-entry .lvl   { margin: 0 6px; }
+  .log-entry .lvl.info  { color: #58a6ff; }
+  .log-entry .lvl.ok    { color: #3fb950; }
+  .log-entry .lvl.warn  { color: #e3b341; }
+  .log-entry .lvl.err   { color: #f85149; }
+  .log-entry .msg   { color: #e6edf3; }
+
+  /* ── STATS ──────────────────────────────────────── */
+  .stats-row {
+    grid-column: 1 / 6;
+    grid-row: 5;
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .stat-box {
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 10px 16px;
+    background: #161b22;
+    flex: 1;
+  }
+
+  .stat-box .s-label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-box .s-value { font-size: 22px; font-weight: bold; color: #58a6ff; margin-top: 2px; }
+  .stat-box .s-value.green { color: #3fb950; }
+  .stat-box .s-value.red   { color: #f85149; }
+
+  /* ── CONTROLES ──────────────────────────────────── */
+  .controls {
+    grid-column: 1 / 6;
+    grid-row: 6;
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+  }
+
+  button {
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #e6edf3;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  button:hover { background: #30363d; border-color: #58a6ff; }
+  button.danger:hover { border-color: #f85149; }
+
+  /* ── CHAPTER BADGE ──────────────────────────────── */
+  .chapters {
+    grid-column: 1 / 6;
+    grid-row: 7;
+    margin-top: 20px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .chapter {
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid #30363d;
+    color: #8b949e;
+  }
+
+  .chapter.done {
+    border-color: #3fb950;
+    color: #3fb950;
+    background: #0d2318;
+  }
+
+  .chapter.done::before { content: "✓ "; }
+  .chapter.current {
+    border-color: #e3b341;
+    color: #e3b341;
+    background: #2d2208;
+  }
+
+  .chapter.current::before { content: "▶ "; }
+
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(63,185,80,0.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(63,185,80,0); }
+  }
+
+  .worker.active { animation: pulse 1.5s ease-in-out infinite; }
+
+  /* SVG overlay para as setas */
+  .svg-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 5;
+  }
+</style>
+</head>
+<body>
+
+<h1>BoletoWorker</h1>
+<p class="subtitle">fluxo de processamento assíncrono de cobranças — visualização em tempo real</p>
+
+<div class="board" id="board">
+
+  <!-- PRODUCER -->
+  <div class="box producer" id="box-producer">
+    <div class="label">externo</div>
+    <div class="name">Producer</div>
+    <div class="detail">publica cobranças</div>
+  </div>
+
+  <!-- CONECTOR producer → exchange -->
+  <div class="connector h" id="conn-pe" style="grid-column:2; grid-row:2; position:relative; height:60px;">
+    <div class="line h"></div>
+  </div>
+
+  <!-- EXCHANGE -->
+  <div class="box exchange" id="box-exchange">
+    <div class="label">RabbitMQ</div>
+    <div class="name">Exchange</div>
+    <div class="detail">roteamento de msgs</div>
+  </div>
+
+  <!-- CONECTOR exchange → queue/dlq -->
+  <div class="connector h" id="conn-eq" style="grid-column:4; grid-row:2; position:relative; height:60px;">
+    <div class="line h"></div>
+  </div>
+
+  <!-- DLQ -->
+  <div class="box dlq" id="box-dlq">
+    <div class="label">Dead Letter</div>
+    <div class="name">DLQ</div>
+    <div class="detail">charges.process.dlq</div>
+    <div class="queue-visual" id="dlq-visual"></div>
+  </div>
+
+  <!-- QUEUE -->
+  <div class="box queue" id="box-queue">
+    <div class="label">fila principal</div>
+    <div class="name">Queue</div>
+    <div class="detail">charges.process</div>
+    <div class="queue-visual" id="queue-visual"></div>
+  </div>
+
+  <!-- WORKERS -->
+  <div class="workers-col" id="workers-col"></div>
+
+  <!-- LOG -->
+  <div class="log-panel">
+    <div class="log-title">▸ stdout — worker logs</div>
+    <div class="log-entries" id="log-entries"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="s-label">publicadas</div>
+      <div class="s-value" id="stat-published">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">processadas</div>
+      <div class="s-value green" id="stat-processed">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">na fila</div>
+      <div class="s-value" id="stat-queued">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">na DLQ</div>
+      <div class="s-value red" id="stat-dlq">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">workers ativos</div>
+      <div class="s-value green" id="stat-workers">0</div>
+    </div>
+  </div>
+
+  <!-- CONTROLES -->
+  <div class="controls">
+    <button onclick="publishMessage()">▶ publicar mensagem</button>
+    <button onclick="publishBurst()">⚡ rajada (5 msgs)</button>
+    <button onclick="toggleFailMode()" id="btn-fail">☠ simular falha</button>
+    <button onclick="resetAll()" class="danger">↺ resetar</button>
+  </div>
+
+  <!-- CAPÍTULOS -->
+  <div class="chapters">
+    <div class="chapter done">Cap 1 — Esqueleto Go</div>
+    <div class="chapter done">Cap 2 — Consumer RabbitMQ</div>
+    <div class="chapter current">Cap 3 — Docker Compose</div>
+    <div class="chapter">Cap 4 — PostgreSQL</div>
+    <div class="chapter">Cap 5 — Idempotência Redis</div>
+    <div class="chapter">Cap 6 — Geração de Boleto</div>
+    <div class="chapter">Cap 7 — Retry Backoff</div>
+    <div class="chapter">Cap 8 — Processor</div>
+    <div class="chapter">Cap 9 — Webhook</div>
+    <div class="chapter">Cap 10 — Observabilidade</div>
+    <div class="chapter">Cap 11 — Graceful Shutdown</div>
+  </div>
+
+</div>
+
+<script>
+// ── Estado ───────────────────────────────────────────────────────────────────
+const CONCURRENCY = 5;
+let stats = { published: 0, processed: 0, queued: 0, dlq: 0 };
+let failMode = false;
+let queueItems = [];
+let dlqItems = [];
+let workers = [];
+let animating = false;
+
+// ── Workers ──────────────────────────────────────────────────────────────────
+function buildWorkers() {
+  const col = document.getElementById('workers-col');
+  col.innerHTML = '';
+  workers = [];
+  for (let i = 0; i < CONCURRENCY; i++) {
+    const el = document.createElement('div');
+    el.className = 'worker';
+    el.innerHTML = `
+      <div class="dot"></div>
+      <span class="w-label">worker ${i + 1}</span>
+      <span class="w-status">idle</span>
+    `;
+    col.appendChild(el);
+    workers.push({ el, busy: false });
+  }
+  updateStatWorkers();
+}
+
+function getFreeWorker() {
+  return workers.find(w => !w.busy) || null;
+}
+
+function setWorkerBusy(w, chargeId) {
+  w.busy = true;
+  w.el.classList.add('active');
+  w.el.querySelector('.w-status').textContent = chargeId;
+  updateStatWorkers();
+}
+
+function setWorkerIdle(w) {
+  w.busy = false;
+  w.el.classList.remove('active');
+  w.el.querySelector('.w-status').textContent = 'idle';
+  updateStatWorkers();
+}
+
+function updateStatWorkers() {
+  const active = workers.filter(w => w.busy).length;
+  document.getElementById('stat-workers').textContent = active;
+}
+
+// ── Fila visual ───────────────────────────────────────────────────────────────
+function addToQueueVisual(isFail) {
+  const container = isFail
+    ? document.getElementById('dlq-visual')
+    : document.getElementById('queue-visual');
+  const dot = document.createElement('div');
+  dot.className = 'q-item';
+  container.appendChild(dot);
+  setTimeout(() => dot.classList.add('visible'), 50);
+  return dot;
+}
+
+function removeFromQueueVisual(dot) {
+  dot.style.opacity = '0';
+  setTimeout(() => dot.remove(), 300);
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+function log(level, msg) {
+  const container = document.getElementById('log-entries');
+  const now = new Date();
+  const ts = now.toTimeString().slice(0, 8);
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  const levels = { info: 'INFO', ok: 'ACK ', warn: 'WARN', err: 'NACK' };
+  entry.innerHTML = `<span class="ts">${ts}</span><span class="lvl ${level}">${levels[level]}</span><span class="msg">${msg}</span>`;
+  container.prepend(entry);
+  while (container.children.length > 20) {
+    container.removeChild(container.lastChild);
+  }
+}
+
+// ── Partícula animada ────────────────────────────────────────────────────────
+function animateParticle(fromEl, toEl, color, emoji, cb) {
+  const board = document.getElementById('board');
+  const boardRect = board.getBoundingClientRect();
+
+  const from = fromEl.getBoundingClientRect();
+  const to   = toEl.getBoundingClientRect();
+
+  const x1 = from.right  - boardRect.left;
+  const y1 = from.top + from.height / 2 - boardRect.top;
+  const x2 = to.left     - boardRect.left;
+  const y2 = to.top + to.height / 2 - boardRect.top;
+
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.cssText = `
+    left: ${x1}px; top: ${y1 - 5}px;
+    background: ${color};
+    display: block;
+    transition: left 0.5s ease, top 0.5s ease;
+    box-shadow: 0 0 6px ${color};
+  `;
+  p.textContent = emoji;
+  board.style.position = 'relative';
+  board.appendChild(p);
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      p.style.left = `${x2}px`;
+      p.style.top  = `${y2 - 5}px`;
+      setTimeout(() => {
+        p.remove();
+        if (cb) cb();
+      }, 520);
+    }, 30);
+  });
+}
+
+// ── Fluxo principal ───────────────────────────────────────────────────────────
+function publishMessage() {
+  const chargeId = 'chg_' + Math.random().toString(36).slice(2, 7).toUpperCase();
+  stats.published++;
+  updateStats();
+
+  log('info', `publicando mensagem  charge_id=${chargeId}`);
+
+  // producer → exchange
+  animateParticle(
+    document.getElementById('box-producer'),
+    document.getElementById('box-exchange'),
+    '#388bfd', '📨',
+    () => {
+      log('info', `exchange recebeu     charge_id=${chargeId}`);
+      const isFail = failMode && Math.random() < 0.4;
+
+      if (isFail) {
+        // exchange → DLQ
+        animateParticle(
+          document.getElementById('box-exchange'),
+          document.getElementById('box-dlq'),
+          '#f85149', '💀',
+          () => {
+            const dot = addToQueueVisual(true);
+            stats.dlq++;
+            updateStats();
+            log('err', `nack → DLQ           charge_id=${chargeId}  motivo=payload_inválido`);
+          }
+        );
+      } else {
+        // exchange → queue
+        animateParticle(
+          document.getElementById('box-exchange'),
+          document.getElementById('box-queue'),
+          '#3fb950', '📩',
+          () => {
+            const dot = addToQueueVisual(false);
+            stats.queued++;
+            updateStats();
+            log('info', `enfileirado          charge_id=${chargeId}`);
+
+            // queue → worker (se tiver livre)
+            const delay = 300 + Math.random() * 400;
+            setTimeout(() => processFromQueue(chargeId, dot), delay);
+          }
+        );
+      }
+    }
+  );
+}
+
+function processFromQueue(chargeId, dot) {
+  const w = getFreeWorker();
+  if (!w) {
+    log('warn', `sem worker livre     charge_id=${chargeId}  aguardando...`);
+    setTimeout(() => processFromQueue(chargeId, dot), 500);
+    return;
+  }
+
+  setWorkerBusy(w, chargeId);
+  stats.queued--;
+  removeFromQueueVisual(dot);
+  updateStats();
+
+  log('info', `processando          charge_id=${chargeId}  worker=${workers.indexOf(w) + 1}`);
+
+  const duration = 1000 + Math.random() * 2000;
+  setTimeout(() => {
+    setWorkerIdle(w);
+    stats.processed++;
+    updateStats();
+    log('ok', `ack enviado          charge_id=${chargeId}  ✓ processado`);
+  }, duration);
+}
+
+function publishBurst() {
+  const count = 5;
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => publishMessage(), i * 200);
+  }
+}
+
+function toggleFailMode() {
+  failMode = !failMode;
+  const btn = document.getElementById('btn-fail');
+  btn.style.borderColor = failMode ? '#f85149' : '#30363d';
+  btn.style.color       = failMode ? '#f85149' : '#e6edf3';
+  log('warn', failMode
+    ? 'modo de falha ATIVADO  — 40% das mensagens vão pra DLQ'
+    : 'modo de falha DESATIVADO');
+}
+
+function resetAll() {
+  stats = { published: 0, processed: 0, queued: 0, dlq: 0 };
+  document.getElementById('queue-visual').innerHTML = '';
+  document.getElementById('dlq-visual').innerHTML = '';
+  document.getElementById('log-entries').innerHTML = '';
+  workers.forEach(w => setWorkerIdle(w));
+  updateStats();
+  log('info', 'sistema resetado');
+}
+
+function updateStats() {
+  document.getElementById('stat-published').textContent = stats.published;
+  document.getElementById('stat-processed').textContent = stats.processed;
+  document.getElementById('stat-queued').textContent    = stats.queued;
+  document.getElementById('stat-dlq').textContent       = stats.dlq;
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+buildWorkers();
+log('info', 'BoletoWorker starting...   log_level=info  concurrency=5');
+log('info', 'conectado ao RabbitMQ      host=localhost:5672');
+log('info', 'filas declaradas           charges.process  charges.process.dlq');
+log('info', 'aguardando mensagens       pressione os botões acima para simular');
+</script>
+</body>
+</html>
