@@ -8,12 +8,14 @@ import (
 type Config struct {
 	LogLevel          string
 	WorkerConcurrency int
+	RabbitMQURL       string
 }
 
 func Load() Config {
 	return Config{
 		LogLevel:          getEnv("LOG_LEVEL", "info"),
 		WorkerConcurrency: getEnvInt("WORKER_CONCURRENCY", 5),
+		RabbitMQURL:       getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 	}
 }
 
