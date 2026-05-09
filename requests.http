@@ -1,0 +1,28 @@
+# BoletoWorker — REST Client
+# Instale a extensão "REST Client" no VS Code para usar este arquivo.
+# Cada bloco separado por "###" é uma requisição independente.
+
+# ─── Capítulo 9 — Health Check & Métricas ────────────────────────────────────
+
+# GET http://localhost:9090/health/live
+
+# ###
+
+# GET http://localhost:9090/health/ready
+
+# ###
+
+# GET http://localhost:9090/metrics
+
+# ─── Capítulo 11 — Mock Boleto API ───────────────────────────────────────────
+
+# POST http://localhost:8081/boletos
+# Content-Type: application/json
+
+# {
+#   "charge_id": "chg_test_001",
+#   "customer_name": "João Silva",
+#   "customer_document": "12345678901",
+#   "amount_cents": 15000,
+#   "due_date": "2025-07-15"
+# }
