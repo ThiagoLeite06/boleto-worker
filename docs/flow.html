@@ -32,9 +32,10 @@
   .board {
     display: grid;
     grid-template-columns: 160px 1fr 260px 1fr 220px;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto auto auto auto auto auto auto;
     gap: 0 0;
     align-items: center;
+    position: relative;
   }
 
   /* ── CAIXAS ─────────────────────────────────────── */
@@ -55,26 +56,20 @@
     margin-bottom: 6px;
   }
 
-  .box .name {
-    font-size: 14px;
-    font-weight: bold;
-  }
-
-  .box .detail {
-    font-size: 11px;
-    color: #8b949e;
-    margin-top: 4px;
-  }
+  .box .name  { font-size: 14px; font-weight: bold; }
+  .box .detail { font-size: 11px; color: #8b949e; margin-top: 4px; }
 
   .box.producer  { border-color: #388bfd; grid-column: 1; grid-row: 2; }
   .box.exchange  { border-color: #d2a8ff; grid-column: 3; grid-row: 2; }
   .box.dlq       { border-color: #f85149; grid-column: 5; grid-row: 1; margin-bottom: 8px; }
   .box.queue     { border-color: #3fb950; grid-column: 5; grid-row: 2; }
+  .box.postgres  { border-color: #e3b341; grid-column: 5; grid-row: 4; margin-top: 8px; }
 
   .box.producer .name  { color: #388bfd; }
   .box.exchange .name  { color: #d2a8ff; }
   .box.dlq .name       { color: #f85149; }
   .box.queue .name     { color: #3fb950; }
+  .box.postgres .name  { color: #e3b341; }
 
   /* ── WORKERS ────────────────────────────────────── */
   .workers-col {
@@ -99,26 +94,35 @@
   }
 
   .worker .dot {
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     border-radius: 50%;
     background: #30363d;
     flex-shrink: 0;
     transition: background 0.2s;
   }
 
-  .worker.active {
-    border-color: #3fb950;
-    background: #0d2318;
-  }
-
+  .worker.active { border-color: #3fb950; background: #0d2318; }
   .worker.active .dot { background: #3fb950; }
+  .worker.saving { border-color: #e3b341; background: #1f1a08; }
+  .worker.saving .dot { background: #e3b341; }
 
-  .worker .w-label { color: #8b949e; }
+  .worker .w-label  { color: #8b949e; }
   .worker .w-status { margin-left: auto; font-size: 10px; color: #8b949e; }
   .worker.active .w-status { color: #3fb950; }
+  .worker.saving .w-status { color: #e3b341; }
 
-  /* ── CONECTORES ─────────────────────────────────── */
+  /* ── CONECTOR VERTICAL worker → postgres ─────── */
+  .conn-v-pg {
+    grid-column: 5;
+    grid-row: 3;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-end;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── CONECTORES HORIZONTAIS ──────────────────── */
   .connector {
     position: relative;
     display: flex;
@@ -128,52 +132,27 @@
   }
 
   .connector.h { grid-row: 2; }
-  .connector.h-top { grid-row: 1; }
 
-  .line {
-    position: absolute;
-    background: #30363d;
-  }
-
+  .line { position: absolute; background: #30363d; }
   .line.h { height: 2px; width: 100%; }
   .line.v { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
 
-  /* ── PARTÍCULAS ─────────────────────────────────── */
-  .particle {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    z-index: 10;
-    display: none;
-    font-size: 10px;
-    line-height: 10px;
-    text-align: center;
-  }
-
-  /* ── FILA VISUAL ────────────────────────────────── */
-  .queue-visual {
-    margin-top: 8px;
-    display: flex;
-    gap: 3px;
-    flex-wrap: wrap;
-  }
+  /* ── FILA VISUAL ────────────────────────────── */
+  .queue-visual { margin-top: 8px; display: flex; gap: 3px; flex-wrap: wrap; }
 
   .q-item {
-    width: 10px;
-    height: 10px;
+    width: 10px; height: 10px;
     border-radius: 2px;
     background: #3fb950;
     opacity: 0;
     transition: opacity 0.3s;
   }
-
   .q-item.visible { opacity: 1; }
 
-  /* ── LOG ────────────────────────────────────────── */
+  /* ── LOG ──────────────────────────────────────── */
   .log-panel {
     grid-column: 1 / 6;
-    grid-row: 4;
+    grid-row: 5;
     margin-top: 32px;
     border: 1px solid #30363d;
     border-radius: 8px;
@@ -211,18 +190,19 @@
     text-overflow: ellipsis;
   }
 
-  .log-entry .ts    { color: #8b949e; }
-  .log-entry .lvl   { margin: 0 6px; }
-  .log-entry .lvl.info  { color: #58a6ff; }
-  .log-entry .lvl.ok    { color: #3fb950; }
-  .log-entry .lvl.warn  { color: #e3b341; }
-  .log-entry .lvl.err   { color: #f85149; }
-  .log-entry .msg   { color: #e6edf3; }
+  .log-entry .ts   { color: #8b949e; }
+  .log-entry .lvl  { margin: 0 6px; }
+  .log-entry .lvl.info { color: #58a6ff; }
+  .log-entry .lvl.ok   { color: #3fb950; }
+  .log-entry .lvl.warn { color: #e3b341; }
+  .log-entry .lvl.err  { color: #f85149; }
+  .log-entry .lvl.db   { color: #e3b341; }
+  .log-entry .msg  { color: #e6edf3; }
 
-  /* ── STATS ──────────────────────────────────────── */
+  /* ── STATS ──────────────────────────────────── */
   .stats-row {
     grid-column: 1 / 6;
-    grid-row: 5;
+    grid-row: 6;
     margin-top: 16px;
     display: flex;
     gap: 12px;
@@ -238,13 +218,14 @@
 
   .stat-box .s-label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; }
   .stat-box .s-value { font-size: 22px; font-weight: bold; color: #58a6ff; margin-top: 2px; }
-  .stat-box .s-value.green { color: #3fb950; }
-  .stat-box .s-value.red   { color: #f85149; }
+  .stat-box .s-value.green  { color: #3fb950; }
+  .stat-box .s-value.red    { color: #f85149; }
+  .stat-box .s-value.yellow { color: #e3b341; }
 
-  /* ── CONTROLES ──────────────────────────────────── */
+  /* ── CONTROLES ──────────────────────────────── */
   .controls {
     grid-column: 1 / 6;
-    grid-row: 6;
+    grid-row: 7;
     margin-top: 16px;
     display: flex;
     gap: 10px;
@@ -265,10 +246,10 @@
   button:hover { background: #30363d; border-color: #58a6ff; }
   button.danger:hover { border-color: #f85149; }
 
-  /* ── CHAPTER BADGE ──────────────────────────────── */
+  /* ── CAPÍTULOS ──────────────────────────────── */
   .chapters {
     grid-column: 1 / 6;
-    grid-row: 7;
+    grid-row: 8;
     margin-top: 20px;
     display: flex;
     gap: 8px;
@@ -283,20 +264,22 @@
     color: #8b949e;
   }
 
-  .chapter.done {
-    border-color: #3fb950;
-    color: #3fb950;
-    background: #0d2318;
-  }
-
+  .chapter.done    { border-color: #3fb950; color: #3fb950; background: #0d2318; }
   .chapter.done::before { content: "✓ "; }
-  .chapter.current {
-    border-color: #e3b341;
-    color: #e3b341;
-    background: #2d2208;
-  }
-
+  .chapter.current { border-color: #e3b341; color: #e3b341; background: #2d2208; }
   .chapter.current::before { content: "▶ "; }
+
+  /* ── PARTÍCULA ──────────────────────────────── */
+  .particle {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    z-index: 10;
+    display: none;
+    font-size: 10px;
+    line-height: 10px;
+    text-align: center;
+  }
 
   @keyframes fadeIn { to { opacity: 1; } }
 
@@ -305,16 +288,13 @@
     50%       { box-shadow: 0 0 0 6px rgba(63,185,80,0); }
   }
 
-  .worker.active { animation: pulse 1.5s ease-in-out infinite; }
-
-  /* SVG overlay para as setas */
-  .svg-overlay {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    pointer-events: none;
-    z-index: 5;
+  @keyframes pulse-yellow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(227,179,65,0.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(227,179,65,0); }
   }
+
+  .worker.active { animation: pulse 1.5s ease-in-out infinite; }
+  .worker.saving { animation: pulse-yellow 1s ease-in-out infinite; }
 </style>
 </head>
 <body>
@@ -332,7 +312,7 @@
   </div>
 
   <!-- CONECTOR producer → exchange -->
-  <div class="connector h" id="conn-pe" style="grid-column:2; grid-row:2; position:relative; height:60px;">
+  <div class="connector h" style="grid-column:2; grid-row:2; position:relative; height:60px;">
     <div class="line h"></div>
   </div>
 
@@ -343,8 +323,8 @@
     <div class="detail">roteamento de msgs</div>
   </div>
 
-  <!-- CONECTOR exchange → queue/dlq -->
-  <div class="connector h" id="conn-eq" style="grid-column:4; grid-row:2; position:relative; height:60px;">
+  <!-- CONECTOR exchange → queue -->
+  <div class="connector h" style="grid-column:4; grid-row:2; position:relative; height:60px;">
     <div class="line h"></div>
   </div>
 
@@ -367,6 +347,13 @@
   <!-- WORKERS -->
   <div class="workers-col" id="workers-col"></div>
 
+  <!-- POSTGRES -->
+  <div class="box postgres" id="box-postgres">
+    <div class="label">PostgreSQL</div>
+    <div class="name">charges</div>
+    <div class="detail">persistência das cobranças</div>
+  </div>
+
   <!-- LOG -->
   <div class="log-panel">
     <div class="log-title">▸ stdout — worker logs</div>
@@ -386,6 +373,10 @@
     <div class="stat-box">
       <div class="s-label">na fila</div>
       <div class="s-value" id="stat-queued">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="s-label">salvas no banco</div>
+      <div class="s-value yellow" id="stat-saved">0</div>
     </div>
     <div class="stat-box">
       <div class="s-label">na DLQ</div>
@@ -409,9 +400,9 @@
   <div class="chapters">
     <div class="chapter done">Cap 1 — Esqueleto Go</div>
     <div class="chapter done">Cap 2 — Consumer RabbitMQ</div>
-    <div class="chapter current">Cap 3 — Docker Compose</div>
-    <div class="chapter">Cap 4 — PostgreSQL</div>
-    <div class="chapter">Cap 5 — Idempotência Redis</div>
+    <div class="chapter done">Cap 3 — Docker Compose</div>
+    <div class="chapter done">Cap 4 — PostgreSQL</div>
+    <div class="chapter current">Cap 5 — Idempotência Redis</div>
     <div class="chapter">Cap 6 — Geração de Boleto</div>
     <div class="chapter">Cap 7 — Retry Backoff</div>
     <div class="chapter">Cap 8 — Processor</div>
@@ -423,14 +414,10 @@
 </div>
 
 <script>
-// ── Estado ───────────────────────────────────────────────────────────────────
 const CONCURRENCY = 5;
-let stats = { published: 0, processed: 0, queued: 0, dlq: 0 };
+let stats = { published: 0, processed: 0, queued: 0, dlq: 0, saved: 0 };
 let failMode = false;
-let queueItems = [];
-let dlqItems = [];
-let workers = [];
-let animating = false;
+let workers  = [];
 
 // ── Workers ──────────────────────────────────────────────────────────────────
 function buildWorkers() {
@@ -443,42 +430,41 @@ function buildWorkers() {
     el.innerHTML = `
       <div class="dot"></div>
       <span class="w-label">worker ${i + 1}</span>
-      <span class="w-status">idle</span>
-    `;
+      <span class="w-status">idle</span>`;
     col.appendChild(el);
     workers.push({ el, busy: false });
   }
   updateStatWorkers();
 }
 
-function getFreeWorker() {
-  return workers.find(w => !w.busy) || null;
-}
+function getFreeWorker() { return workers.find(w => !w.busy) || null; }
 
 function setWorkerBusy(w, chargeId) {
   w.busy = true;
-  w.el.classList.add('active');
+  w.el.className = 'worker active';
   w.el.querySelector('.w-status').textContent = chargeId;
   updateStatWorkers();
 }
 
+function setWorkerSaving(w) {
+  w.el.className = 'worker saving';
+  w.el.querySelector('.w-status').textContent = 'salvando...';
+}
+
 function setWorkerIdle(w) {
   w.busy = false;
-  w.el.classList.remove('active');
+  w.el.className = 'worker';
   w.el.querySelector('.w-status').textContent = 'idle';
   updateStatWorkers();
 }
 
 function updateStatWorkers() {
-  const active = workers.filter(w => w.busy).length;
-  document.getElementById('stat-workers').textContent = active;
+  document.getElementById('stat-workers').textContent = workers.filter(w => w.busy).length;
 }
 
 // ── Fila visual ───────────────────────────────────────────────────────────────
 function addToQueueVisual(isFail) {
-  const container = isFail
-    ? document.getElementById('dlq-visual')
-    : document.getElementById('queue-visual');
+  const container = document.getElementById(isFail ? 'dlq-visual' : 'queue-visual');
   const dot = document.createElement('div');
   dot.className = 'q-item';
   container.appendChild(dot);
@@ -494,54 +480,64 @@ function removeFromQueueVisual(dot) {
 // ── Log ───────────────────────────────────────────────────────────────────────
 function log(level, msg) {
   const container = document.getElementById('log-entries');
-  const now = new Date();
-  const ts = now.toTimeString().slice(0, 8);
+  const ts = new Date().toTimeString().slice(0, 8);
+  const labels = { info: 'INFO', ok: 'ACK ', warn: 'WARN', err: 'NACK', db: 'SQL ' };
   const entry = document.createElement('div');
   entry.className = 'log-entry';
-  const levels = { info: 'INFO', ok: 'ACK ', warn: 'WARN', err: 'NACK' };
-  entry.innerHTML = `<span class="ts">${ts}</span><span class="lvl ${level}">${levels[level]}</span><span class="msg">${msg}</span>`;
+  entry.innerHTML = `<span class="ts">${ts}</span><span class="lvl ${level}">${labels[level]}</span><span class="msg">${msg}</span>`;
   container.prepend(entry);
-  while (container.children.length > 20) {
-    container.removeChild(container.lastChild);
-  }
+  while (container.children.length > 20) container.removeChild(container.lastChild);
 }
 
-// ── Partícula animada ────────────────────────────────────────────────────────
+// ── Partícula animada ─────────────────────────────────────────────────────────
 function animateParticle(fromEl, toEl, color, emoji, cb) {
-  const board = document.getElementById('board');
+  const board    = document.getElementById('board');
   const boardRect = board.getBoundingClientRect();
-
   const from = fromEl.getBoundingClientRect();
   const to   = toEl.getBoundingClientRect();
 
   const x1 = from.right  - boardRect.left;
   const y1 = from.top + from.height / 2 - boardRect.top;
   const x2 = to.left     - boardRect.left;
-  const y2 = to.top + to.height / 2 - boardRect.top;
+  const y2 = to.top  + to.height  / 2 - boardRect.top;
 
   const p = document.createElement('div');
   p.className = 'particle';
-  p.style.cssText = `
-    left: ${x1}px; top: ${y1 - 5}px;
-    background: ${color};
-    display: block;
-    transition: left 0.5s ease, top 0.5s ease;
-    box-shadow: 0 0 6px ${color};
-  `;
+  p.style.cssText = `left:${x1}px;top:${y1-5}px;background:${color};display:block;
+    transition:left 0.5s ease,top 0.5s ease;box-shadow:0 0 6px ${color};`;
   p.textContent = emoji;
-  board.style.position = 'relative';
   board.appendChild(p);
 
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      p.style.left = `${x2}px`;
-      p.style.top  = `${y2 - 5}px`;
-      setTimeout(() => {
-        p.remove();
-        if (cb) cb();
-      }, 520);
-    }, 30);
-  });
+  requestAnimationFrame(() => setTimeout(() => {
+    p.style.left = `${x2}px`;
+    p.style.top  = `${y2-5}px`;
+    setTimeout(() => { p.remove(); if (cb) cb(); }, 520);
+  }, 30));
+}
+
+// partícula vertical: de um worker até o postgres (movimento para baixo)
+function animateWorkerToPostgres(workerEl, cb) {
+  const board    = document.getElementById('board');
+  const boardRect = board.getBoundingClientRect();
+  const pgEl = document.getElementById('box-postgres');
+  const from = workerEl.getBoundingClientRect();
+  const to   = pgEl.getBoundingClientRect();
+
+  const x = from.left + from.width / 2 - boardRect.left;
+  const y1 = from.bottom - boardRect.top;
+  const y2 = to.top      - boardRect.top;
+
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.cssText = `left:${x-5}px;top:${y1}px;background:#e3b341;display:block;
+    transition:top 0.4s ease;box-shadow:0 0 6px #e3b341;`;
+  p.textContent = '💾';
+  board.appendChild(p);
+
+  requestAnimationFrame(() => setTimeout(() => {
+    p.style.top = `${y2-10}px`;
+    setTimeout(() => { p.remove(); if (cb) cb(); }, 420);
+  }, 30));
 }
 
 // ── Fluxo principal ───────────────────────────────────────────────────────────
@@ -549,8 +545,7 @@ function publishMessage() {
   const chargeId = 'chg_' + Math.random().toString(36).slice(2, 7).toUpperCase();
   stats.published++;
   updateStats();
-
-  log('info', `publicando mensagem  charge_id=${chargeId}`);
+  log('info', `publicando msg       charge_id=${chargeId}`);
 
   // producer → exchange
   animateParticle(
@@ -562,20 +557,18 @@ function publishMessage() {
       const isFail = failMode && Math.random() < 0.4;
 
       if (isFail) {
-        // exchange → DLQ
         animateParticle(
           document.getElementById('box-exchange'),
           document.getElementById('box-dlq'),
           '#f85149', '💀',
           () => {
-            const dot = addToQueueVisual(true);
+            addToQueueVisual(true);
             stats.dlq++;
             updateStats();
             log('err', `nack → DLQ           charge_id=${chargeId}  motivo=payload_inválido`);
           }
         );
       } else {
-        // exchange → queue
         animateParticle(
           document.getElementById('box-exchange'),
           document.getElementById('box-queue'),
@@ -585,10 +578,7 @@ function publishMessage() {
             stats.queued++;
             updateStats();
             log('info', `enfileirado          charge_id=${chargeId}`);
-
-            // queue → worker (se tiver livre)
-            const delay = 300 + Math.random() * 400;
-            setTimeout(() => processFromQueue(chargeId, dot), delay);
+            setTimeout(() => processFromQueue(chargeId, dot), 300 + Math.random() * 400);
           }
         );
       }
@@ -608,23 +598,27 @@ function processFromQueue(chargeId, dot) {
   stats.queued--;
   removeFromQueueVisual(dot);
   updateStats();
+  log('info', `processando          charge_id=${chargeId}  worker=${workers.indexOf(w)+1}`);
 
-  log('info', `processando          charge_id=${chargeId}  worker=${workers.indexOf(w) + 1}`);
-
-  const duration = 1000 + Math.random() * 2000;
+  const duration = 1000 + Math.random() * 1500;
   setTimeout(() => {
-    setWorkerIdle(w);
-    stats.processed++;
-    updateStats();
-    log('ok', `ack enviado          charge_id=${chargeId}  ✓ processado`);
+    // worker → postgres
+    setWorkerSaving(w);
+    log('db',   `INSERT charges       charge_id=${chargeId}  status=processing`);
+    animateWorkerToPostgres(w.el, () => {
+      stats.saved++;
+      updateStats();
+      log('db',   `UPDATE charges       charge_id=${chargeId}  status=boleto_generated`);
+      setWorkerIdle(w);
+      stats.processed++;
+      updateStats();
+      log('ok',  `ack enviado          charge_id=${chargeId}  ✓ salvo no banco`);
+    });
   }, duration);
 }
 
 function publishBurst() {
-  const count = 5;
-  for (let i = 0; i < count; i++) {
-    setTimeout(() => publishMessage(), i * 200);
-  }
+  for (let i = 0; i < 5; i++) setTimeout(() => publishMessage(), i * 200);
 }
 
 function toggleFailMode() {
@@ -638,10 +632,10 @@ function toggleFailMode() {
 }
 
 function resetAll() {
-  stats = { published: 0, processed: 0, queued: 0, dlq: 0 };
+  stats = { published: 0, processed: 0, queued: 0, dlq: 0, saved: 0 };
   document.getElementById('queue-visual').innerHTML = '';
-  document.getElementById('dlq-visual').innerHTML = '';
-  document.getElementById('log-entries').innerHTML = '';
+  document.getElementById('dlq-visual').innerHTML   = '';
+  document.getElementById('log-entries').innerHTML  = '';
   workers.forEach(w => setWorkerIdle(w));
   updateStats();
   log('info', 'sistema resetado');
@@ -652,11 +646,13 @@ function updateStats() {
   document.getElementById('stat-processed').textContent = stats.processed;
   document.getElementById('stat-queued').textContent    = stats.queued;
   document.getElementById('stat-dlq').textContent       = stats.dlq;
+  document.getElementById('stat-saved').textContent     = stats.saved;
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 buildWorkers();
 log('info', 'BoletoWorker starting...   log_level=info  concurrency=5');
+log('info', 'postgres conectado         host=localhost:5432  db=boletoworker');
 log('info', 'conectado ao RabbitMQ      host=localhost:5672');
 log('info', 'filas declaradas           charges.process  charges.process.dlq');
 log('info', 'aguardando mensagens       pressione os botões acima para simular');

@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS charges;
+DROP TYPE IF EXISTS charge_status;

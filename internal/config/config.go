@@ -9,6 +9,8 @@ type Config struct {
 	LogLevel          string
 	WorkerConcurrency int
 	RabbitMQURL       string
+	PostgresURL       string
+	RedisURL          string
 }
 
 func Load() Config {
@@ -16,6 +18,8 @@ func Load() Config {
 		LogLevel:          getEnv("LOG_LEVEL", "info"),
 		WorkerConcurrency: getEnvInt("WORKER_CONCURRENCY", 5),
 		RabbitMQURL:       getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
+		PostgresURL:       getEnv("POSTGRES_URL", "postgres://bw_user:bw_pass@localhost:5432/boletoworker?sslmode=disable"),
+		RedisURL:          getEnv("REDIS_URL", "redis://localhost:6379/0"),
 	}
 }
 
